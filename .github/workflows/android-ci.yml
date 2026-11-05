@@ -25,12 +25,17 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      # Setup Android SDK
+      # Setup Android SDK - minimal, no license prompts
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 'latest'
           accept-android-sdk-licenses: true
+
+      # Install required SDK packages
+      - name: Install SDK packages
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       # Cache Gradle
       - name: Cache Gradle packages
@@ -82,6 +87,10 @@ jobs:
           cmdline-tools-version: 'latest'
           accept-android-sdk-licenses: true
 
+      - name: Install SDK packages
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools" "system-images;android-35;default;x86_64"
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -93,30 +102,24 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Install emulator system image
-      - name: Install Emulator
-        run: |
-          echo "y" | sdkmanager --install "system-images;android-35;default;x86_64"
-          echo "no" | avdmanager create avd -n test -k "system-images;android-35;default;x86_64" --force
+      # Create and start emulator
+      - name: Create AVD
+        run: echo "no" | avdmanager create avd -n test -k "system-images;android-35;default;x86_64" --force
 
-      # Start emulator (headless)
       - name: Start Emulator
         run: |
           emulator -avd test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
           sleep 30
 
-      # Wait for emulator to boot
       - name: Wait for Emulator
         run: |
           adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
-          adb shell input keyevent 82  # Unlock screen
+          adb shell input keyevent 82
 
-      # Run instrumented tests (connectedAndroidTest)
       - name: Run Instrumented Tests
         run: ./gradlew connectedDebugAndroidTest --no-daemon
         continue-on-error: true
 
-      # Upload test results
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -127,7 +130,6 @@ jobs:
             **/build/reports/androidTests/
           retention-days: 7
 
-      # Upload screenshots on failure
       - name: Upload Screenshots on Failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -152,6 +154,8 @@ jobs:
         with:
           cmdline-tools-version: 'latest'
           accept-android-sdk-licenses: true
+      - name: Install SDK packages
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
       - name: Grant execute permission
         run: chmod +x gradlew
       - name: Run Lint
@@ -181,6 +185,8 @@ jobs:
         with:
           cmdline-tools-version: 'latest'
           accept-android-sdk-licenses: true
+      - name: Install SDK packages
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -192,7 +198,6 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
         env:
-          # Keystore secrets in GitHub Settings → Secrets → Actions
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
