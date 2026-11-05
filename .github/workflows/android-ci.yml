@@ -73,6 +73,9 @@ jobs:
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
+      - name: Verify APK exists
+        run: ls -la app/build/outputs/apk/debug/app-debug.apk
+
       - name: Show build log on failure
         if: failure()
         run: cat build.log
