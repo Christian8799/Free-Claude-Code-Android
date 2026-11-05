@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -79,9 +79,8 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 35
-          emulator: true
-          arch: x86_64
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -94,14 +93,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Install emulator system image
+      - name: Install Emulator
+        run: |
+          echo "y" | sdkmanager --install "system-images;android-35;default;x86_64"
+          echo "no" | avdmanager create avd -n test -k "system-images;android-35;default;x86_64" --force
+
       # Start emulator (headless)
       - name: Start Emulator
-        uses: android-actions/start-emulator@v3
-        with:
-          api-level: 35
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+        run: |
+          emulator -avd test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+          sleep 30
 
       # Wait for emulator to boot
       - name: Wait for Emulator
@@ -112,7 +114,6 @@ jobs:
       # Run instrumented tests (connectedAndroidTest)
       - name: Run Instrumented Tests
         run: ./gradlew connectedDebugAndroidTest --no-daemon
-        # Continue on error to collect test results
         continue-on-error: true
 
       # Upload test results
@@ -141,11 +142,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
       - name: Grant execute permission
         run: chmod +x gradlew
       - name: Run Lint
@@ -166,14 +172,15 @@ jobs:
     needs: [build, test, lint]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
       - uses: android-actions/setup-android@v3
         with:
-          api-level: 35
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
