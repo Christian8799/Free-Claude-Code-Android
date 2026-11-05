@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvLogsFull"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/background"
+        android:padding="12dp"
+        android:textSize="12sp"
+        android:textColor="@color/green"
+        android:fontFamily="monospace"
+        android:scrollbars="vertical"
+        android:maxLines="500"
+        android:gravity="top|start" />
+
+</LinearLayout>

@@ -1,0 +1,49 @@
+# FreeClaudeCodeAndroid - Status 2026-11-05
+
+## Aktueller Stand
+- **APK baut erfolgreich** (gradle assembleDebug OK)
+- **App startet auf Handy** (MainActivity läuft, Touch-Events kommen an)
+- **Logs gehen in Datei**, nicht in logcat → `adb shell cat /sdcard/Android/data/com.freeclaudecode.android/files/Documents/app_logs.txt`
+
+## Architektur (termux-services / runit)
+1. **Install FCC** → `uv tool install free-claude-code` in Termux
+2. **Install termux-services** → `pkg install termux-services && termux-services enable`
+3. **Setup FCC Service** → Erstellt runit-Service unter `~/.termux/services/fcc-server/`
+4. **Start/Stop Server** → `sv up/down/restart ~/.termux/services/fcc-server` (persistent, überlebt Shell-Exit)
+
+## Fixes heute
+- **TermuxManager.kt**: String-Escaping ($HOME → \$HOME) für Kotlin korrigiert
+- **TermuxServerService.kt**: Nutzt neue `startService()`/`stopService()` statt gelöschter Methoden
+- **MainViewModel.kt**: Alle `serverState.value =` → `serverState.postValue()` (Background-Thread Fix)
+
+## Offene Todos
+1. **App auf Handy testen** (Buttons: Install FCC → Install termux-services → Setup FCC Service → Start Server)
+2. **Live-Logs prüfen**: `adb shell cat /sdcard/Android/data/com.freeclaudecode.android/files/Documents/app_logs.txt`
+3. **Termux-Seite debuggen**: `sv status ~/.termux/services/fcc-server` + `tail -f ~/.termux/services/fcc-server/log/main/current`
+4. **Python 3.14 Problem**: free-claude-code braucht Python 3.14+, Termux hat nur 3.13 → evtl. manuell kompilieren oder warten
+
+## Wichtige Dateien
+- `app/src/main/java/com/freeclaudecode/android/termux/TermuxManager.kt` - Kern-Logik
+- `app/src/main/java/com/freeclaudecode/android/ui/main/MainViewModel.kt` - UI-State
+- `app/src/main/java/com/freeclaudecode/android/service/TermuxServerService.kt` - Foreground-Service
+- `app/src/main/java/com/freeclaudecode/android/FreeClaudeCodeApplication.kt` - Live-Logging in Datei
+
+## Nächste Befehle zum Testen
+```powershell
+# APK installieren (falls neu gebaut)
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Live-Logs aus Datei lesen
+adb shell cat /sdcard/Android/data/com.freeclaudecode.android/files/Documents/app_logs.txt
+
+# Termux Service-Status prüfen
+adb shell "su -c 'sv status /data/data/com.termux/files/home/.termux/services/fcc-server'"
+
+# Termux Service-Logs live
+adb shell "su -c 'tail -f /data/data/com.termux/files/home/.termux/services/fcc-server/log/main/current'"
+```
+
+## Bekannte Probleme
+- Termux:API Broadcast liefert keine Ausgabe zurück (Fire-and-forget) → `executeCommandWithOutput` nutzt Temp-Datei
+- Xiaomi MIUI killt Background-Prozesse → Foreground-Service + Battery-Optimierung deaktivieren nötig
+- Keine Logs in logcat (nur in Datei) → `FreeClaudeCodeApplication.logLive()` schreibt nur in File
