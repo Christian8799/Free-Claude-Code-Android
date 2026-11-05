@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build Debug APK
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -23,12 +23,33 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      # Manual Android SDK setup - bypass broken setup-android action
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 35
-          ndk-version: r27c
-          build-tools-version: 35.0.0
+        run: |
+          # Use pre-installed SDK on ubuntu-latest
+          if [ -d "/usr/local/lib/android/sdk" ]; then
+            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+            echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+            echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          else
+            # Fallback: install cmdline-tools manually
+            sudo mkdir -p /opt/android-sdk/cmdline-tools
+            cd /opt/android-sdk/cmdline-tools
+            sudo wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+            sudo unzip -q cmdline-tools.zip
+            sudo mv cmdline-tools latest
+            sudo rm cmdline-tools.zip
+            echo "ANDROID_HOME=/opt/android-sdk" >> $GITHUB_ENV
+            echo "/opt/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+            echo "/opt/android-sdk/platform-tools" >> $GITHUB_PATH
+          fi
+          echo "Android SDK location: $ANDROID_HOME"
+          ls -la $ANDROID_HOME/
+
+      - name: Accept licenses and install packages
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -36,7 +57,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.kts', '**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -45,6 +66,8 @@ jobs:
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
