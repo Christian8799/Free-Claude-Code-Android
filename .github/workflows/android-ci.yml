@@ -23,20 +23,16 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      # Manual Android SDK setup (avoid setup-android action issues)
+      # Use pre-installed Android SDK on ubuntu-latest
       - name: Set up Android SDK
         run: |
-          # Download and install cmdline-tools
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          mv cmdline-tools latest
-          rm cmdline-tools.zip
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          # Check what's available
+          ls -la /usr/local/lib/android/sdk/
 
-      - name: Accept licenses and install packages
+      - name: Install SDK packages
         run: |
           yes | sdkmanager --licenses
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
