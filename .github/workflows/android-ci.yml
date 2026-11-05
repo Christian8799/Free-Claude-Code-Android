@@ -11,6 +11,8 @@ jobs:
     name: Build Debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -24,38 +26,23 @@ jobs:
           cache: 'gradle'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 'latest'
-          accept-android-sdk-licenses: true
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          ls -la /usr/local/lib/android/sdk/
 
       - name: Install SDK packages
-        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.kts', '**/*.gradle') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      # Debug: show Java/Kotlin/Gradle versions
-      - name: Show versions
         run: |
-          java -version
-          echo "JAVA_HOME=$JAVA_HOME"
-          ./gradlew --version
+          yes | sdkmanager --licenses
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: assembleDebug --no-daemon --stacktrace
+          gradle-version: 8.13
+          java-home: ${{ env.JAVA_HOME_21_X64 }}
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
