@@ -69,7 +69,6 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace --info 2>&1 | tee build.log
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
-        continue-on-error: true
 
       - name: Show build log on failure
         if: failure()
