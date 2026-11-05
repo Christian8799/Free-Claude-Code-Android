@@ -19,7 +19,7 @@ jobs:
 
       # Setup JDK 21 (für Kotlin 2.1 / Gradle 8.13)
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -29,11 +29,8 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 35
-          ndk-version: r27c
-          emulator: true
-          build-tools: 35.0.0
-          cmdline-tools: latest
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
 
       # Cache Gradle
       - name: Cache Gradle packages
